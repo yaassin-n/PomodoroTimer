@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Focus Flow Pro - Desktop</title>
+<title>Focus Flow Pro</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=DM+Mono:wght@500&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -20,18 +20,19 @@
     --apple-blue: #007AFF;
   }
 
-  
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  
   body { 
     font-family: 'DM Sans', sans-serif; 
     background: var(--bg); 
     color: var(--text);
     display: flex;
+    flex-direction: row; /* Desktop default */
     height: 100vh;
     overflow: hidden;
   }
 
-  /* SIDEBAR NAV */
+  /* SIDEBAR NAV (Desktop) / BOTTOM NAV (Mobile) */
   nav.sidebar {
     width: 100px;
     background: var(--white);
@@ -40,6 +41,7 @@
     align-items: center;
     padding: 40px 0;
     border-right: 1px solid rgba(0,0,0,0.05);
+    z-index: 100;
   }
 
   .nav-item {
@@ -53,14 +55,23 @@
   .nav-label { font-size: 11px; font-weight: 700; }
 
   /* MAIN CONTENT AREA */
-  main { flex: 1; padding: 40px; overflow-y: auto; }
+  main { 
+    flex: 1; 
+    padding: 40px; 
+    overflow-y: auto; 
+    -webkit-overflow-scrolling: touch;
+  }
   .view { display: none; width: 100%; max-width: 1200px; margin: 0 auto; }
   .view.active { display: block; animation: fadeIn 0.4s ease; }
 
   .welcome-header { margin-bottom: 40px; }
   .welcome-text { font-size: 32px; font-weight: 700; }
 
-  .desktop-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 30px; }
+  .desktop-grid { 
+    display: grid; 
+    grid-template-columns: 1.2fr 1fr; 
+    gap: 30px; 
+  }
 
   /* CARDS */
   .card {
@@ -68,6 +79,7 @@
     border-radius: var(--radius);
     padding: 40px;
     box-shadow: var(--shadow);
+    margin-bottom: 20px;
   }
 
   /* TIMER */
@@ -78,16 +90,22 @@
     padding: 6px;
     border-radius: 40px;
     margin-bottom: 30px;
+    width: 100%;
+    justify-content: space-between;
   }
   .mode-tab {
-    padding: 12px 24px; border: none; border-radius: 35px;
+    flex: 1;
+    padding: 12px 10px; border: none; border-radius: 35px;
     font-weight: 600; cursor: pointer; background: transparent; color: var(--text-muted);
+    font-size: 14px;
+    white-space: nowrap;
   }
   .mode-tab.active { background: var(--red); color: white; }
 
   .timer-display {
     font-family: 'DM Mono', monospace;
-    font-size: 110px; font-weight: 500;
+    font-size: clamp(60px, 15vw, 110px); /* Tamaño fluido */
+    font-weight: 500;
     margin: 20px 0; color: var(--text);
   }
 
@@ -104,9 +122,10 @@
   .task-input-group input {
     flex: 1; padding: 15px; border-radius: var(--radius-sm);
     border: 1px solid #EEE; font-family: inherit; font-size: 16px;
+    min-width: 0; /* Evita que el input rompa el layout */
   }
   .btn-add {
-    padding: 0 25px; border-radius: var(--radius-sm); border: none;
+    padding: 0 20px; border-radius: var(--radius-sm); border: none;
     background: var(--text); color: white; cursor: pointer; font-weight: 600;
   }
   .task-item {
@@ -114,33 +133,62 @@
     padding: 15px; background: var(--bg);
     border-radius: var(--radius-sm); margin-bottom: 10px;
   }
+  .task-item span { overflow-wrap: anywhere; flex: 1; }
   .task-item.completed span { text-decoration: line-through; opacity: 0.5; }
+  
   .checkbox { 
-    width: 24px; height: 24px; border-radius: 8px; 
+    flex-shrink: 0; width: 24px; height: 24px; border-radius: 8px; 
     border: 2px solid var(--red-mid); cursor: pointer;
     display: flex; align-items: center; justify-content: center;
   }
   .checkbox.checked { background: var(--red); border-color: var(--red); color: white; }
 
-  /* CALENDAR APPLE STYLE */
-  .calendar-card { background: white; border-radius: var(--radius); padding: 30px; box-shadow: var(--shadow); }
+  /* CALENDAR */
+  .calendar-card { background: white; border-radius: var(--radius); padding: clamp(15px, 5vw, 30px); box-shadow: var(--shadow); }
   .cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
   .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
   .cal-day-name { font-size: 11px; font-weight: 700; color: var(--text-muted); text-align: center; padding-bottom: 10px; text-transform: uppercase; }
   .cal-date {
     aspect-ratio: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
-    border-radius: 50%; cursor: pointer; font-weight: 500; font-size: 15px; transition: 0.2s;
+    border-radius: 50%; cursor: pointer; font-weight: 500; font-size: 14px; transition: 0.2s;
   }
   .cal-date:hover:not(.empty) { background: var(--bg); }
   .cal-date.today { color: var(--red); font-weight: 700; }
   .cal-date.selected { background: var(--apple-blue) !important; color: white !important; }
   .cal-dot { width: 4px; height: 4px; border-radius: 50%; background: #34C759; margin-top: 2px; }
-  .btn-cal { background: none; border: none; color: var(--apple-blue); font-weight: 600; cursor: pointer; font-size: 16px; }
+  .btn-cal { background: none; border: none; color: var(--apple-blue); font-weight: 600; cursor: pointer; font-size: 14px; }
 
-  /* SETTINGS */
-  .setting-row { margin-bottom: 20px; }
-  .setting-row label { display: block; margin-bottom: 8px; font-weight: 600; font-size: 14px; color: var(--text-muted); }
-  .setting-row input { width: 100%; padding: 15px; border-radius: 12px; border: 1px solid #EEE; font-size: 16px; font-weight: 600; }
+  /* --- RESPONSIVE ADJUSTMENTS --- */
+  @media (max-width: 850px) {
+    body { flex-direction: column; }
+    
+    nav.sidebar {
+      width: 100%;
+      height: 70px;
+      flex-direction: row;
+      justify-content: space-around;
+      padding: 0;
+      border-right: none;
+      border-top: 1px solid rgba(0,0,0,0.05);
+      position: fixed;
+      bottom: 0;
+    }
+
+    .nav-item { margin-bottom: 0; padding: 10px; }
+
+    main {
+      padding: 20px;
+      padding-bottom: 90px; /* Espacio para la barra inferior */
+    }
+
+    .desktop-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .welcome-text { font-size: 24px; }
+    
+    .card { padding: 25px; }
+  }
 
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 </style>
@@ -185,7 +233,7 @@
         <div class="card">
           <h2 style="margin-bottom: 20px;">Your Tasks</h2>
           <div class="task-input-group">
-            <input type="text" id="task-input" placeholder="What are you working on?">
+            <input type="text" id="task-input" placeholder="What's next?">
             <button class="btn-add" onclick="addTask()">Add</button>
           </div>
           <div id="task-list"></div>
@@ -197,14 +245,14 @@
       <div class="welcome-header"><h1 class="welcome-text">Study Report</h1></div>
       <div class="calendar-card">
         <div class="cal-header">
-          <h2 id="current-month-year">Month Year</h2>
-          <div>
-            <button class="btn-cal" onclick="changeMonth(-1)">< Prev</button>
-            <button class="btn-cal" onclick="changeMonth(1)" style="margin-left:15px">Next ></button>
+          <h2 id="current-month-year" style="font-size: 18px;">Month Year</h2>
+          <div style="display: flex; gap: 10px;">
+            <button class="btn-cal" onclick="changeMonth(-1)">Prev</button>
+            <button class="btn-cal" onclick="changeMonth(1)">Next</button>
           </div>
         </div>
         <div class="cal-grid" id="calendar-days"></div>
-        <div id="day-detail" style="margin-top:30px; padding:20px; background:var(--bg); border-radius:15px; font-weight:500;">
+        <div id="day-detail" style="margin-top:30px; padding:20px; background:var(--bg); border-radius:15px; font-weight:500; font-size: 14px;">
           Selecciona un día para ver los detalles.
         </div>
       </div>
@@ -212,7 +260,7 @@
 
     <div class="view" id="view-settings">
       <div class="welcome-header"><h1 class="welcome-text">Settings</h1></div>
-      <div class="card" style="max-width: 500px;">
+      <div class="card" style="max-width: 500px; margin: 0 auto;">
         <div class="setting-row">
           <label>Focus Time (min)</label>
           <input type="number" id="input-focus" value="25">
@@ -225,16 +273,16 @@
           <label>Long Break (min)</label>
           <input type="number" id="input-long" value="15">
         </div>
-        <button class="btn-add" style="width:100%; padding:15px; background:var(--red)" onclick="saveSettings()">Save Configuration</button>
+        <button class="btn-add" style="width:100%; padding:15px; background:var(--red); height: auto;" onclick="saveSettings()">Save Configuration</button>
       </div>
     </div>
   </main>
 
 <script>
-  // --- ESTADO GLOBAL Y PERSISTENCIA ---
+  // El JavaScript se mantiene igual funcionalmente, solo aseguramos que el renderizado no rompa nada
   let state = JSON.parse(localStorage.getItem('pomodoroState')) || {
     tasks: [],
-    history: {}, // Formato: {"2024-04-21": 150 (minutos)}
+    history: {}, 
     settings: { focus: 25, short: 5, long: 15 }
   };
 
@@ -242,19 +290,19 @@
     localStorage.setItem('pomodoroState', JSON.stringify(state));
   }
 
-  // --- NAVEGACIÓN ---
   function goTo(viewId, btn) {
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
     document.getElementById(`view-${viewId}`).classList.add('active');
     btn.classList.add('active');
     if(viewId === 'stats') renderCalendar();
+    // Scroll al inicio al cambiar de vista en móvil
+    document.querySelector('main').scrollTop = 0;
   }
 
-  // --- TEMPORIZADOR ---
   let timerInterval;
-  let timeLeft = state.settings.focus * 60;
   let currentMode = 'focus';
+  let timeLeft = state.settings[currentMode] * 60;
   let isRunning = false;
 
   function updateTimerDisplay() {
@@ -307,7 +355,6 @@
     resetTimer();
   }
 
-  // --- TAREAS ---
   function renderTasks() {
     const list = document.getElementById('task-list');
     list.innerHTML = '';
@@ -317,7 +364,7 @@
       item.innerHTML = `
         <div class="checkbox ${task.done ? 'checked' : ''}" onclick="toggleTask(${index})">${task.done ? '✓' : ''}</div>
         <span>${task.text}</span>
-        <button onclick="deleteTask(${index})" style="margin-left:auto; background:none; border:none; cursor:pointer; color:var(--text-muted)">✕</button>
+        <button onclick="deleteTask(${index})" style="margin-left:auto; background:none; border:none; cursor:pointer; color:var(--text-muted); padding: 5px;">✕</button>
       `;
       list.appendChild(item);
     });
@@ -344,75 +391,53 @@
     renderTasks();
   }
 
-  // --- AJUSTES ---
   function saveSettings() {
-    state.settings.focus = parseInt(document.getElementById('input-focus').value);
-    state.settings.short = parseInt(document.getElementById('input-short').value);
-    state.settings.long = parseInt(document.getElementById('input-long').value);
+    state.settings.focus = parseInt(document.getElementById('input-focus').value) || 25;
+    state.settings.short = parseInt(document.getElementById('input-short').value) || 5;
+    state.settings.long = parseInt(document.getElementById('input-long').value) || 15;
     saveToStorage();
     resetTimer();
     alert('Settings Saved!');
   }
 
-  // --- CALENDARIO (APPLE STYLE) ---
   let calDate = new Date();
-
   function renderCalendar() {
     const grid = document.getElementById('calendar-days');
     const header = document.getElementById('current-month-year');
     grid.innerHTML = '';
-
     const month = calDate.getMonth();
     const year = calDate.getFullYear();
     header.textContent = new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(calDate);
-
-    // Días semana
     ['S','M','T','W','T','F','S'].forEach(d => {
       const el = document.createElement('div');
       el.className = 'cal-day-name';
       el.textContent = d;
       grid.appendChild(el);
     });
-
     const firstDay = new Date(year, month, 1).getDay();
     const totalDays = new Date(year, month + 1, 0).getDate();
-
-    // Espacios vacíos
     for (let i = 0; i < firstDay; i++) {
-      const empty = document.createElement('div');
-      empty.className = 'cal-date empty';
-      grid.appendChild(empty);
+      grid.appendChild(Object.assign(document.createElement('div'), {className:'cal-date empty'}));
     }
-
-    // Días del mes
     for (let i = 1; i <= totalDays; i++) {
       const dayEl = document.createElement('div');
       dayEl.className = 'cal-date';
       const dateStr = `${year}-${(month+1).toString().padStart(2,'0')}-${i.toString().padStart(2,'0')}`;
-      
-      const isToday = new Date().toISOString().split('T')[0] === dateStr;
-      if (isToday) dayEl.classList.add('today');
-
+      if (new Date().toISOString().split('T')[0] === dateStr) dayEl.classList.add('today');
       dayEl.innerHTML = `<span>${i}</span>`;
-      
-      // Si hay estudio este día, poner punto verde
       if (state.history[dateStr]) {
-        const dot = document.createElement('div');
-        dot.className = 'cal-dot';
-        dayEl.appendChild(dot);
+        dayEl.appendChild(Object.assign(document.createElement('div'), {className:'cal-dot'}));
       }
-
       dayEl.onclick = () => {
         document.querySelectorAll('.cal-date').forEach(d => d.classList.remove('selected'));
         dayEl.classList.add('selected');
         const minutes = state.history[dateStr] || 0;
         document.getElementById('day-detail').innerHTML = `
           <strong>${dateStr}</strong><br>
-          Focus Time: ${minutes} minutes <br>
-          Sessions: ${Math.ceil(minutes/state.settings.focus)}
+          Focus Time: ${minutes} min <br>
+          Sessions: ${Math.ceil(minutes/(state.settings.focus || 1))}
         `;
       };
-
       grid.appendChild(dayEl);
     }
   }
@@ -422,7 +447,7 @@
     renderCalendar();
   }
 
-  // Inicializar
+  // Inicialización
   renderTasks();
   updateTimerDisplay();
   document.getElementById('input-focus').value = state.settings.focus;
