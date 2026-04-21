@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Focus Timer</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #FF4B4B;
+    --red-light: #FFE8E8;
+    --red-mid: #FFB3B3;
+    --red-dark: #E03A3A;
+    --bg: #F7F7F8;
+    --white: #FFFFFF;
+    --text: #1A1A2E;
+    --text-muted: #9A9AB0;
+    --text-light: #C4C4D4;
+    --card: #FFFFFF;
+    --shadow: 0 4px 24px rgba(0,0,0,0.08);
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+    --radius: 20px;
+    --radius-sm: 12px;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+  }
+
+  /* PHONE SHELL */
+  .phone {
+    width: 390px;
+    min-height: 844px;
+    background: var(--bg);
+    border-radius: 50px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,0,0,0.08);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* STATUS BAR */
+  .status-bar {
+    background: var(--white);
+    padding: 14px 28px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .status-bar .time { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+  .status-icons { display: flex; gap: 5px; align-items: center; }
+  .status-icons svg { width: 14px; height: 14px; }
+
+  /* VIEWS */
+  .view { display: none; flex-direction: column; flex: 1; overflow-y: auto; }
+  .view.active { display: flex; }
+
+  /* ─── HOME VIEW ─── */
+  .home-header {
+    background: var(--white);
+    padding: 16px 24px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .user-info { display: flex; align-items: center; gap: 12px; }
+  .avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(135deg, #f093fb, #f5576c);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; font-weight: 700; color: white;
+    box-shadow: 0 4px 12px rgba(245,87,108,0.4);
+  }
+  .user-name { font-size: 16px; font-weight: 700; color: var(--text); }
+  .user-sub { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+  .notif-btn {
+    width: 40px; height: 40px; border-radius: 12px; background: var(--bg);
+    border: none; display: flex; align-items: center; justify-content: center; cursor: pointer;
+    position: relative;
+  }
+  .notif-dot {
+    position: absolute; top: 8px; right: 8px;
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--red); border: 2px solid white;
+  }
+
+  /* TASK CARD */
+  .task-card {
+    margin: 16px 20px 0;
+    background: var(--white); border-radius: var(--radius-sm);
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+  .task-icon {
+    width: 36px; height: 36px; border-radius: 10px; background: var(--red);
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .task-icon svg { color: white; }
+  .task-info { flex: 1 }
+  .task-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .task-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; display: flex; align-items: center; gap: 6px; }
+  .task-arrow { color: var(--text-muted); }
+
+  /* MODE TABS */
+  .mode-tabs {
+    display: flex; gap: 8px; padding: 20px 20px 0;
+  }
+  .mode-tab {
+    flex: 1; padding: 9px 0; border-radius: 20px; border: none; cursor: pointer;
+    font-family: var(--font); font-size: 12px; font-weight: 600;
+    transition: all 0.25s ease;
+    background: var(--white); color: var(--text-muted);
+  }
+  .mode-tab.active { background: var(--red); color: white; box-shadow: 0 4px 12px rgba(255,75,75,0.35); }
+
+  /* TIMER RING */
+  .timer-container {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 24px 0 16px;
+  }
+  .ring-wrapper {
+    position: relative; width: 240px; height: 240px;
+  }
+  .ring-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .ring-bg { fill: none; stroke: var(--red-light); stroke-width: 12; }
+  .ring-progress {
+    fill: none; stroke: var(--red); stroke-width: 12;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 1s linear;
+  }
+  .timer-inner {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 6px;
+  }
+  .play-small {
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--red-light); border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .timer-display {
+    font-family: var(--mono); font-size: 48px; font-weight: 500;
+    color: var(--text); letter-spacing: -1px; line-height: 1;
+  }
+  .timer-dots { display: flex; gap: 5px; margin-top: 4px; }
+  .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: var(--red-light);
+    transition: background 0.3s;
+  }
+  .dot.active { background: var(--red); }
+  .timer-label { font-size: 13px; color: var(--text-muted); font-weight: 500; margin-top: 4px; }
+
+  /* CONTROLS */
+  .controls {
+    display: flex; align-items: center; justify-content: center; gap: 20px;
+    padding: 8px 0 20px;
+  }
+  .ctrl-btn {
+    width: 48px; height: 48px; border-radius: 50%; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--red-light); color: var(--red);
+    transition: all 0.2s ease;
+  }
+  .ctrl-btn:hover { background: var(--red-mid); }
+  .ctrl-btn.main {
+    width: 60px; height: 60px;
+    background: var(--red); color: white;
+    box-shadow: 0 8px 24px rgba(255,75,75,0.45);
+  }
+  .ctrl-btn.main:hover { background: var(--red-dark); }
+
+  /* QUICK ACTIONS */
+  .quick-actions {
+    display: flex; justify-content: space-around;
+    padding: 16px 20px; margin: 0 20px;
+    background: var(--white); border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-sm);
+  }
+  .qa-item { display: flex; flex-direction: column; align-items: center; gap: 6px; cursor: pointer; }
+  .qa-icon { color: var(--text-muted); }
+  .qa-label { font-size: 10px; color: var(--text-muted); font-weight: 500; }
+
+  /* TASKS LIST */
+  .section-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 20px 10px;
+  }
+  .section-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .section-link { font-size: 12px; color: var(--red); font-weight: 600; display: flex; align-items: center; gap: 4px; }
+
+  .task-list-item {
+    margin: 0 20px 10px;
+    background: var(--white); border-radius: var(--radius-sm);
+    padding: 14px 16px; display: flex; align-items: center; gap: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+  .task-check {
+    width: 22px; height: 22px; border-radius: 50%;
+    border: 2px solid var(--red-mid); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .task-check.done { background: var(--red); border-color: var(--red); }
+  .task-list-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .task-list-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ─── STATS VIEW ─── */
+  .stats-header {
+    background: var(--white); padding: 16px 24px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .stats-title { font-size: 18px; font-weight: 700; color: var(--text); }
+
+  .stats-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+
+  .stat-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .stat-card {
+    background: var(--white); border-radius: var(--radius-sm);
+    padding: 16px; box-shadow: var(--shadow-sm);
+  }
+  .stat-value { font-size: 28px; font-weight: 700; color: var(--text); line-height: 1; }
+  .stat-unit { font-size: 13px; font-weight: 400; color: var(--text-muted); }
+  .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 6px; font-weight: 500; }
+  .stat-card.accent { background: var(--red); }
+  .stat-card.accent .stat-value, .stat-card.accent .stat-label, .stat-card.accent .stat-unit { color: white; }
+  .stat-card.accent .stat-label { opacity: 0.8; }
+
+  /* CHART */
+  .chart-card {
+    background: var(--white); border-radius: var(--radius-sm);
+    padding: 16px; box-shadow: var(--shadow-sm);
+  }
+  .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+  .chart-title { font-size: 14px; font-weight: 700; color: var(--text); }
+  .chart-bars { display: flex; align-items: flex-end; gap: 8px; height: 100px; padding-bottom: 4px; }
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bar {
+    width: 100%; border-radius: 6px 6px 0 0;
+    background: var(--red-light); transition: height 0.5s ease;
+    position: relative; min-height: 4px;
+  }
+  .bar.highlight { background: var(--red); }
+  .bar .bar-tooltip {
+    position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: white; font-size: 9px; font-weight: 600;
+    padding: 2px 5px; border-radius: 4px; white-space: nowrap; display: none;
+  }
+  .bar.highlight .bar-tooltip { display: block; }
+  .bar-label { font-size: 9px; color: var(--text-muted); font-weight: 500; }
+
+  /* HEATMAP */
+  .heatmap-card {
+    background: var(--white); border-radius: var(--radius-sm);
+    padding: 16px; box-shadow: var(--shadow-sm);
+  }
+  .heatmap-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 12px; }
+  .heatmap-grid { display: flex; flex-direction: column; gap: 4px; }
+  .heatmap-row { display: flex; gap: 4px; }
+  .heatmap-cell {
+    width: 18px; height: 18px; border-radius: 4px; background: var(--red-light);
+    transition: background 0.3s;
+  }
+  .heatmap-cell[data-level="1"] { background: #FFD0D0; }
+  .heatmap-cell[data-level="2"] { background: #FFB3B3; }
+  .heatmap-cell[data-level="3"] { background: #FF8080; }
+  .heatmap-cell[data-level="4"] { background: var(--red); }
+  .heatmap-days { display: flex; gap: 4px; margin-bottom: 4px; }
+  .heatmap-day { width: 18px; font-size: 8px; color: var(--text-muted); font-weight: 600; text-align: center; }
+
+  /* ─── SETTINGS VIEW ─── */
+  .settings-header {
+    background: var(--white); padding: 16px 24px 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid rgba(0,0,0,0.04);
+  }
+  .settings-title { font-size: 18px; font-weight: 700; color: var(--text); }
+
+  .settings-body { padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+  .settings-section { background: var(--white); border-radius: var(--radius-sm); padding: 20px; box-shadow: var(--shadow-sm); }
+  .settings-section-title { font-size: 13px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 16px; }
+
+  .setting-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(0,0,0,0.04); }
+  .setting-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .setting-row:first-of-type { padding-top: 0; }
+  .setting-label { font-size: 14px; font-weight: 600; color: var(--text); }
+  .setting-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .setting-ctrl { display: flex; align-items: center; gap: 10px; }
+  .num-btn {
+    width: 32px; height: 32px; border-radius: 10px; border: none;
+    background: var(--bg); color: var(--text); font-size: 18px; font-weight: 700;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  .num-btn:hover { background: var(--red-light); color: var(--red); }
+  .num-val { font-size: 16px; font-weight: 700; color: var(--text); min-width: 28px; text-align: center; }
+
+  .save-btn {
+    width: 100%; padding: 16px; border-radius: var(--radius-sm); border: none;
+    background: var(--red); color: white; font-family: var(--font); font-size: 15px;
+    font-weight: 700; cursor: pointer; box-shadow: 0 6px 20px rgba(255,75,75,0.4);
+    transition: all 0.2s; margin-top: 4px;
+  }
+  .save-btn:hover { background: var(--red-dark); transform: translateY(-1px); }
+  .save-btn:active { transform: translateY(0); }
+
+  /* ─── BOTTOM NAV ─── */
+  .bottom-nav {
+    background: var(--white); padding: 12px 0 20px;
+    display: flex; justify-content: space-around;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.05);
+  }
+  .nav-item {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    cursor: pointer; padding: 4px 16px; border-radius: 12px;
+    transition: all 0.2s; border: none; background: none; font-family: var(--font);
+  }
+  .nav-icon { color: var(--text-muted); transition: color 0.2s; }
+  .nav-label { font-size: 10px; font-weight: 600; color: var(--text-muted); transition: color 0.2s; }
+  .nav-item.active .nav-icon, .nav-item.active .nav-label { color: var(--red); }
+  .nav-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--red); display: none; }
+  .nav-item.active .nav-dot { display: block; }
+
+  /* ANIMATIONS */
+  @keyframes pulse {
+    0%, 100% { box-shadow: 0 8px 24px rgba(255,75,75,0.45); }
+    50% { box-shadow: 0 8px 32px rgba(255,75,75,0.7); }
+  }
+  .ctrl-btn.main.running { animation: pulse 2s infinite; }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .view.active { animation: fadeIn 0.3s ease; }
+
+  /* SCROLLBAR */
+  .view::-webkit-scrollbar { width: 0; }
+
+  /* RESPONSIVE */
+  @media (max-width: 430px) {
+    body { padding: 0; }
+    .phone { border-radius: 0; width: 100%; min-height: 100vh; box-shadow: none; }
+  }
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <span class="time" id="clock">9:41</span>
+    <div class="status-icons">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.08 2.93 1 9zm8 8l3 3 3-3a4.237 4.237 0 00-6 0zm-4-4l2 2a7.074 7.074 0 0110 0l2-2C15.14 9.14 8.87 9.14 5 13z"/></svg>
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z"/></svg>
+    </div>
+  </div>
+
+  <!-- ═══════════ HOME VIEW ═══════════ -->
+  <div class="view active" id="view-home">
+    <div class="home-header">
+      <div class="user-info">
+        <div class="avatar">A</div>
+        <div>
+          <div class="user-name">Andrew Ainsley</div>
+          <div class="user-sub">Welcome back! 👋</div>
+        </div>
+      </div>
+      <button class="notif-btn">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#1A1A2E" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <div class="notif-dot"></div>
+      </button>
+    </div>
+
+    <!-- Current Task -->
+    <div class="task-card">
+      <div class="task-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 13h6M9 17h4"/></svg>
+      </div>
+      <div class="task-info">
+        <div class="task-title" id="current-task-name">Design User Interface (UI)</div>
+        <div class="task-meta">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span id="task-meta-text">0 / 8 · 0 / 200 mins</span>
+        </div>
+      </div>
+      <div class="task-arrow">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9A9AB0" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+      </div>
+    </div>
+
+    <!-- Mode Tabs -->
+    <div class="mode-tabs">
+      <button class="mode-tab active" data-mode="focus" onclick="switchMode('focus',this)">Focus</button>
+      <button class="mode-tab" data-mode="short" onclick="switchMode('short',this)">Short Break</button>
+      <button class="mode-tab" data-mode="long" onclick="switchMode('long',this)">Long Break</button>
+    </div>
+
+    <!-- Timer Ring -->
+    <div class="timer-container">
+      <div class="ring-wrapper">
+        <svg class="ring-svg" viewBox="0 0 240 240">
+          <circle class="ring-bg" cx="120" cy="120" r="108"/>
+          <circle class="ring-progress" id="ring" cx="120" cy="120" r="108"
+            stroke-dasharray="678.58"
+            stroke-dashoffset="0"/>
+        </svg>
+        <div class="timer-inner">
+          <button class="play-small" onclick="skipBack()">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--red)"><polygon points="19 20 9 12 19 4 19 20"/><line x1="5" y1="19" x2="5" y2="5" stroke="var(--red)" stroke-width="2"/></svg>
+          </button>
+          <div class="timer-display" id="timer-display">25:00</div>
+          <div class="timer-dots" id="timer-dots"></div>
+          <div class="timer-label" id="timer-label">Stay Focus!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button class="ctrl-btn" id="btn-reset" onclick="resetTimer()" title="Reiniciar">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+      </button>
+      <button class="ctrl-btn main" id="btn-play" onclick="toggleTimer()">
+        <svg id="play-icon" width="24" height="24" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <svg id="pause-icon" width="24" height="24" viewBox="0 0 24 24" fill="white" style="display:none"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      </button>
+      <button class="ctrl-btn" onclick="skipSession()" title="Siguiente">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+      </button>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <div class="qa-item">
+        <svg class="qa-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span class="qa-label">Strict Mode</span>
+      </div>
+      <div class="qa-item">
+        <svg class="qa-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+        <span class="qa-label">Timer Mode</span>
+      </div>
+      <div class="qa-item">
+        <svg class="qa-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+        <span class="qa-label">Full Screen</span>
+      </div>
+      <div class="qa-item">
+        <svg class="qa-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+        <span class="qa-label">White Noise</span>
+      </div>
+    </div>
+
+    <!-- Tasks -->
+    <div class="section-header">
+      <span class="section-title">Tasks</span>
+      <span class="section-link">View All <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg></span>
+    </div>
+    <div id="tasks-list"></div>
+    <div style="height:12px"></div>
+  </div>
+
+  <!-- ═══════════ STATS VIEW ═══════════ -->
+  <div class="view" id="view-stats">
+    <div class="stats-header">
+      <span class="stats-title">Report</span>
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#9A9AB0" stroke-width="2"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></svg>
+    </div>
+    <div class="stats-body">
+      <!-- Stat Cards -->
+      <div class="stat-cards">
+        <div class="stat-card accent">
+          <div class="stat-value"><span id="stat-sessions">0</span><span class="stat-unit"></span></div>
+          <div class="stat-label">Sessions Completed</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><span id="stat-hours">0.0</span><span class="stat-unit"> hr</span></div>
+          <div class="stat-label">Total Focus Time</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><span id="stat-today">0</span><span class="stat-unit"> min</span></div>
+          <div class="stat-label">Today's Focus</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value"><span id="stat-streak">0</span><span class="stat-unit"> day</span></div>
+          <div class="stat-label">Current Streak</div>
+        </div>
+      </div>
+
+      <!-- Bar Chart -->
+      <div class="chart-card">
+        <div class="chart-header">
+          <span class="chart-title">Focus Time</span>
+          <span style="font-size:11px;color:var(--text-muted);font-weight:600;">Weekly ▾</span>
+        </div>
+        <div class="chart-bars" id="bar-chart"></div>
+      </div>
+
+      <!-- Heatmap -->
+      <div class="heatmap-card">
+        <div class="heatmap-title">Activity Heatmap</div>
+        <div class="heatmap-days" id="heatmap-days"></div>
+        <div class="heatmap-grid" id="heatmap-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ SETTINGS VIEW ═══════════ -->
+  <div class="view" id="view-settings">
+    <div class="settings-header">
+      <span class="settings-title">Settings</span>
+    </div>
+    <div class="settings-body">
+      <div class="settings-section">
+        <div class="settings-section-title">Timer Durations</div>
+        <div class="setting-row">
+          <div><div class="setting-label">Focus Session</div><div class="setting-sub">Main work interval</div></div>
+          <div class="setting-ctrl">
+            <button class="num-btn" onclick="adjustSetting('focus',-1)">−</button>
+            <span class="num-val" id="s-focus">25</span>
+            <button class="num-btn" onclick="adjustSetting('focus',1)">+</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Short Break</div><div class="setting-sub">Between sessions</div></div>
+          <div class="setting-ctrl">
+            <button class="num-btn" onclick="adjustSetting('short',-1)">−</button>
+            <span class="num-val" id="s-short">5</span>
+            <button class="num-btn" onclick="adjustSetting('short',1)">+</button>
+          </div>
+        </div>
+        <div class="setting-row">
+          <div><div class="setting-label">Long Break</div><div class="setting-sub">After 4 sessions</div></div>
+          <div class="setting-ctrl">
+            <button class="num-btn" onclick="adjustSetting('long',-1)">−</button>
+            <span class="num-val" id="s-long">15</span>
+            <button class="num-btn" onclick="adjustSetting('long',1)">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <div class="settings-section-title">Sessions</div>
+        <div class="setting-row">
+          <div><div class="setting-label">Sessions before long break</div><div class="setting-sub">Pomodoro cycle length</div></div>
+          <div class="setting-ctrl">
+            <button class="num-btn" onclick="adjustSetting('cycles',-1)">−</button>
+            <span class="num-val" id="s-cycles">4</span>
+            <button class="num-btn" onclick="adjustSetting('cycles',1)">+</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="save-btn" onclick="saveSettings()">Save Settings</button>
+
+      <div class="settings-section" style="margin-top:4px">
+        <div class="settings-section-title">Data</div>
+        <div class="setting-row" style="border:none">
+          <div><div class="setting-label">Reset All Statistics</div><div class="setting-sub">Clears sessions & heatmap</div></div>
+          <button onclick="resetStats()" style="background:var(--red-light);color:var(--red);border:none;padding:8px 14px;border-radius:10px;font-family:var(--font);font-size:12px;font-weight:700;cursor:pointer;">Reset</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════ BOTTOM NAV ═══════════ -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" id="nav-home" onclick="goTo('home')">
+      <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      <span class="nav-label">Home</span>
+      <div class="nav-dot"></div>
+    </button>
+    <button class="nav-item" id="nav-stats" onclick="goTo('stats')">
+      <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      <span class="nav-label">Report</span>
+      <div class="nav-dot"></div>
+    </button>
+    <button class="nav-item" id="nav-settings" onclick="goTo('settings')">
+      <svg class="nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+      <span class="nav-label">Settings</span>
+      <div class="nav-dot"></div>
+    </button>
+  </nav>
+
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+const DEFAULT_SETTINGS = { focus: 25, short: 5, long: 15, cycles: 4 };
+
+let settings = JSON.parse(localStorage.getItem('pm_settings') || JSON.stringify(DEFAULT_SETTINGS));
+let stats = JSON.parse(localStorage.getItem('pm_stats') || JSON.stringify({
+  totalSessions: 0, totalMinutes: 0, dailyData: {}
+}));
+
+let currentMode = 'focus';
+let secondsLeft = settings.focus * 60;
+let totalSeconds = settings.focus * 60;
+let isRunning = false;
+let interval = null;
+let sessionCount = 0; // within current cycle
+
+const CIRCUMFERENCE = 2 * Math.PI * 108; // 678.58
+
+const tasks = [
+  { title: 'Create a Design Wireframe', sub: '2 / 5 sessions', done: false },
+  { title: 'UI Component Library', sub: '0 / 3 sessions', done: false },
+  { title: 'User Research Notes', sub: '4 / 4 sessions', done: true },
+];
+
+// ─── INIT ─────────────────────────────────────────────────
+function init() {
+  updateClock();
+  setInterval(updateClock, 1000);
+  loadSettings();
+  renderDots();
+  renderTasks();
+  updateDisplay();
+  updateStats();
+  renderChart();
+  renderHeatmap();
+}
+
+function updateClock() {
+  const now = new Date();
+  const h = now.getHours().toString().padStart(2,'0');
+  const m = now.getMinutes().toString().padStart(2,'0');
+  document.getElementById('clock').textContent = `${h}:${m}`;
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────
+function goTo(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById(`view-${name}`).classList.add('active');
+  document.getElementById(`nav-${name}`).classList.add('active');
+  if (name === 'stats') { renderChart(); renderHeatmap(); updateStats(); }
+}
+
+// ─── MODE ────────────────────────────────────────────────
+function switchMode(mode, btn) {
+  if (isRunning) { toggleTimer(); }
+  currentMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const mins = mode === 'focus' ? settings.focus : mode === 'short' ? settings.short : settings.long;
+  secondsLeft = mins * 60;
+  totalSeconds = mins * 60;
+  renderDots();
+  updateDisplay();
+  document.getElementById('timer-label').textContent = mode === 'focus' ? 'Stay Focus!' : mode === 'short' ? 'Short Break 🍵' : 'Long Break 🌿';
+}
+
+function renderDots() {
+  const container = document.getElementById('timer-dots');
+  const cycles = settings.cycles;
+  container.innerHTML = '';
+  for (let i = 0; i < cycles; i++) {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i < sessionCount ? ' active' : '');
+    container.appendChild(d);
+  }
+}
+
+// ─── TIMER ───────────────────────────────────────────────
+function toggleTimer() {
+  isRunning = !isRunning;
+  const playIcon = document.getElementById('play-icon');
+  const pauseIcon = document.getElementById('pause-icon');
+  const mainBtn = document.getElementById('btn-play');
+  if (isRunning) {
+    playIcon.style.display = 'none';
+    pauseIcon.style.display = 'block';
+    mainBtn.classList.add('running');
+    interval = setInterval(tick, 1000);
+  } else {
+    playIcon.style.display = 'block';
+    pauseIcon.style.display = 'none';
+    mainBtn.classList.remove('running');
+    clearInterval(interval);
+  }
+}
+
+function tick() {
+  if (secondsLeft <= 0) {
+    completeSession();
+    return;
+  }
+  secondsLeft--;
+  updateDisplay();
+}
+
+function updateDisplay() {
+  const m = Math.floor(secondsLeft / 60).toString().padStart(2,'0');
+  const s = (secondsLeft % 60).toString().padStart(2,'0');
+  document.getElementById('timer-display').textContent = `${m}:${s}`;
+  const progress = secondsLeft / totalSeconds;
+  const offset = CIRCUMFERENCE * progress;
+  document.getElementById('ring').style.strokeDashoffset = CIRCUMFERENCE - offset;
+}
+
+function resetTimer() {
+  if (isRunning) toggleTimer();
+  const mins = currentMode === 'focus' ? settings.focus : currentMode === 'short' ? settings.short : settings.long;
+  secondsLeft = mins * 60;
+  totalSeconds = mins * 60;
+  updateDisplay();
+}
+
+function skipBack() { resetTimer(); }
+
+function skipSession() {
+  if (isRunning) toggleTimer();
+  completeSession();
+}
+
+function completeSession() {
+  if (isRunning) toggleTimer();
+  if (currentMode === 'focus') {
+    sessionCount++;
+    const mins = settings.focus;
+    recordSession(mins);
+    if (sessionCount >= settings.cycles) {
+      sessionCount = 0;
+      autoSwitchMode('long');
+    } else {
+      autoSwitchMode('short');
+    }
+  } else {
+    autoSwitchMode('focus');
+  }
+  renderDots();
+  updateStats();
+}
+
+function autoSwitchMode(mode) {
+  currentMode = mode;
+  const btn = document.querySelector(`[data-mode="${mode}"]`);
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  const mins = mode === 'focus' ? settings.focus : mode === 'short' ? settings.short : settings.long;
+  secondsLeft = mins * 60;
+  totalSeconds = mins * 60;
+  updateDisplay();
+  document.getElementById('timer-label').textContent = mode === 'focus' ? 'Stay Focus!' : mode === 'short' ? 'Short Break 🍵' : 'Long Break 🌿';
+}
+
+// ─── STATS ───────────────────────────────────────────────
+function recordSession(mins) {
+  const today = new Date().toISOString().slice(0,10);
+  stats.totalSessions++;
+  stats.totalMinutes += mins;
+  stats.dailyData[today] = (stats.dailyData[today] || 0) + mins;
+  localStorage.setItem('pm_stats', JSON.stringify(stats));
+  document.getElementById('task-meta-text').textContent = `${stats.totalSessions} / 8 · ${stats.totalMinutes} / 200 mins`;
+}
+
+function updateStats() {
+  document.getElementById('stat-sessions').textContent = stats.totalSessions;
+  document.getElementById('stat-hours').textContent = (stats.totalMinutes / 60).toFixed(1);
+  const today = new Date().toISOString().slice(0,10);
+  document.getElementById('stat-today').textContent = stats.dailyData[today] || 0;
+  document.getElementById('stat-streak').textContent = calcStreak();
+}
+
+function calcStreak() {
+  let streak = 0;
+  const d = new Date();
+  while (true) {
+    const key = d.toISOString().slice(0,10);
+    if (stats.dailyData[key]) { streak++; d.setDate(d.getDate()-1); }
+    else break;
+  }
+  return streak;
+}
+
+function resetStats() {
+  if (!confirm('¿Seguro que quieres borrar todas las estadísticas?')) return;
+  stats = { totalSessions: 0, totalMinutes: 0, dailyData: {} };
+  localStorage.setItem('pm_stats', JSON.stringify(stats));
+  sessionCount = 0;
+  renderDots();
+  updateStats();
+  renderChart();
+  renderHeatmap();
+}
+
+// ─── CHART ───────────────────────────────────────────────
+function renderChart() {
+  const container = document.getElementById('bar-chart');
+  container.innerHTML = '';
+  const days = [];
+  const labels = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0,10);
+    days.push(stats.dailyData[key] || 0);
+    labels.push(d.getDate().toString());
+  }
+  const max = Math.max(...days, 1);
+  const todayIdx = 6;
+  days.forEach((val, i) => {
+    const pct = (val / max) * 90;
+    const wrap = document.createElement('div');
+    wrap.className = 'bar-wrap';
+    const bar = document.createElement('div');
+    bar.className = 'bar' + (i === todayIdx ? ' highlight' : '');
+    bar.style.height = `${Math.max(pct, 4)}%`;
+    if (val > 0) {
+      const tip = document.createElement('div');
+      tip.className = 'bar-tooltip';
+      tip.textContent = val + 'm';
+      bar.appendChild(tip);
+    }
+    const lbl = document.createElement('div');
+    lbl.className = 'bar-label';
+    lbl.textContent = labels[i];
+    wrap.appendChild(bar);
+    wrap.appendChild(lbl);
+    container.appendChild(wrap);
+  });
+}
+
+// ─── HEATMAP ─────────────────────────────────────────────
+function renderHeatmap() {
+  const daysRow = document.getElementById('heatmap-days');
+  const grid = document.getElementById('heatmap-grid');
+  daysRow.innerHTML = '';
+  grid.innerHTML = '';
+  const dayNames = ['S','M','T','W','T','F','S'];
+  dayNames.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'heatmap-day';
+    el.textContent = d;
+    daysRow.appendChild(el);
+  });
+
+  // Build 7 weeks × 7 days grid (columns = weeks, rows = days)
+  const weeks = 7;
+  const end = new Date();
+  end.setHours(0,0,0,0);
+  const start = new Date(end);
+  start.setDate(start.getDate() - (weeks * 7 - 1));
+
+  // Build rows (7 days = Mon-Sun)
+  const rows = Array.from({length: 7}, () => []);
+  let cur = new Date(start);
+  // Align to start of week
+  while (cur <= end) {
+    const dow = cur.getDay(); // 0=Sun
+    const key = cur.toISOString().slice(0,10);
+    const mins = stats.dailyData[key] || 0;
+    const level = mins === 0 ? 0 : mins < 15 ? 1 : mins < 30 ? 2 : mins < 60 ? 3 : 4;
+    rows[dow].push({ level, key });
+    cur.setDate(cur.getDate()+1);
+  }
+
+  rows.forEach(row => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'heatmap-row';
+    row.forEach(cell => {
+      const c = document.createElement('div');
+      c.className = 'heatmap-cell';
+      if (cell.level > 0) c.setAttribute('data-level', cell.level);
+      c.title = `${cell.key}: ${stats.dailyData[cell.key] || 0} min`;
+      rowEl.appendChild(c);
+    });
+    grid.appendChild(rowEl);
+  });
+}
+
+// ─── SETTINGS ────────────────────────────────────────────
+const tempSettings = {};
+
+function loadSettings() {
+  Object.assign(tempSettings, settings);
+  ['focus','short','long','cycles'].forEach(k => {
+    document.getElementById(`s-${k}`).textContent = settings[k];
+  });
+}
+
+function adjustSetting(key, delta) {
+  const min = key === 'cycles' ? 1 : 1;
+  const max = key === 'cycles' ? 12 : key === 'focus' ? 90 : 30;
+  tempSettings[key] = Math.min(max, Math.max(min, (tempSettings[key] || settings[key]) + delta));
+  document.getElementById(`s-${key}`).textContent = tempSettings[key];
+}
+
+function saveSettings() {
+  Object.assign(settings, tempSettings);
+  localStorage.setItem('pm_settings', JSON.stringify(settings));
+  resetTimer();
+  const btn = document.querySelector('.save-btn');
+  btn.textContent = '✓ Saved!';
+  btn.style.background = '#22c55e';
+  setTimeout(() => { btn.textContent = 'Save Settings'; btn.style.background = ''; }, 1500);
+}
+
+// ─── TASKS ───────────────────────────────────────────────
+function renderTasks() {
+  const container = document.getElementById('tasks-list');
+  container.innerHTML = '';
+  tasks.forEach((task, i) => {
+    const div = document.createElement('div');
+    div.className = 'task-list-item';
+    div.innerHTML = `
+      <div class="task-check ${task.done ? 'done' : ''}" onclick="toggleTask(${i})">
+        ${task.done ? '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>' : ''}
+      </div>
+      <div>
+        <div class="task-list-title" style="${task.done ? 'text-decoration:line-through;opacity:0.5' : ''}">${task.title}</div>
+        <div class="task-list-sub">${task.sub}</div>
+      </div>`;
+    container.appendChild(div);
+  });
+}
+
+function toggleTask(i) {
+  tasks[i].done = !tasks[i].done;
+  renderTasks();
+}
+
+// ─── START ───────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
